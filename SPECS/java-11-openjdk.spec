@@ -26,8 +26,6 @@
 %bcond_without release
 # Enable static library builds by default.
 %bcond_without staticlibs
-# Remove build artifacts by default
-%bcond_with artifacts
 # Build a fresh libjvm.so for use in a copy of the bootstrap JDK
 %bcond_without fresh_libjvm
 # Build with system libraries
@@ -62,6 +60,9 @@
 # This fixes detailed NMT and other tools which need minimal debug info.
 # See: https://bugzilla.redhat.com/show_bug.cgi?id=1520879
 %global _find_debuginfo_opts -g
+
+# Architecture on which we run Java only tests
+%global jdk_test_arch x86_64
 
 # note: parametrized macros are order-sensitive (unlike not-parametrized) even with normal macros
 # also necessary when passing it as parameter to other macros. If not macro, then it is considered a switch
@@ -330,7 +331,7 @@
 # New Version-String scheme-style defines
 %global featurever 11
 %global interimver 0
-%global updatever 22
+%global updatever 25
 %global patchver 0
 # buildjdkver is usually same as %%{featurever},
 # but in time of bootstrap of next jdk, it is featurever-1,
@@ -383,12 +384,13 @@
 %global origin_nice     OpenJDK
 %global top_level_dir_name   %{vcstag}
 %global top_level_dir_name_backup %{top_level_dir_name}-backup
-%global buildver        7
+%global buildver        9
 # rpmrelease numbering must start at 2 to be later than the 8.6 RPM
 %global rpmrelease      2
 # Settings used by the portable build
 %global portablerelease 1
-%global portablesuffix el8_6.ciqlts
+%global portablesuffix el8_6.86ciq_lts
+%global portabledir 86ciq_lts
 %global portablebuilddir /builddir/build/BUILD
 
 #%%global tagsuffix     %%{nil}
@@ -1147,8 +1149,8 @@ Provides: jre%{?1} = %{epoch}:%{version}-%{release}
 Requires: ca-certificates
 # Require javapackages-filesystem for ownership of /usr/lib/jvm/ and macros
 Requires: javapackages-filesystem
-# 2023c required as of JDK-8305113
-Requires: tzdata-java >= 2023c
+# 2024a required as of JDK-8325150
+Requires: tzdata-java >= 2024a
 # for support of kernel stream control
 # libsctp.so.1 is being `dlopen`ed on demand
 Requires: lksctp-tools%{?_isa}
@@ -1349,14 +1351,14 @@ Source19: README.md
 Source20: java-%{featurever}-openjdk-portable.specfile
 
 # Setup variables to reference correct sources
-%global releasezip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.unstripped.jdk.ciqlts.%{_arch}.tar.xz
-%global staticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.static-libs.ciqlts.%{_arch}.tar.xz
-%global docszip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.docs.ciqlts.%{_arch}.tar.xz
-%global misczip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.misc.ciqlts.%{_arch}.tar.xz
-%global slowdebugzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.slowdebug.jdk.ciqlts.%{_arch}.tar.xz
-%global slowdebugstaticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.slowdebug.static-libs.ciqlts.%{_arch}.tar.xz
-%global fastdebugzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.fastdebug.jdk.ciqlts.%{_arch}.tar.xz
-%global fastdebugstaticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.fastdebug.static-libs.ciqlts.%{_arch}.tar.xz
+%global releasezip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.unstripped.jdk.%{portabledir}.%{_arch}.tar.xz
+%global staticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.static-libs.%{portabledir}.%{_arch}.tar.xz
+%global docszip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.docs.%{portabledir}.%{_arch}.tar.xz
+%global misczip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.misc.%{portabledir}.%{_arch}.tar.xz
+%global slowdebugzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.slowdebug.jdk.%{portabledir}.%{_arch}.tar.xz
+%global slowdebugstaticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.slowdebug.static-libs.%{portabledir}.%{_arch}.tar.xz
+%global fastdebugzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.fastdebug.jdk.%{portabledir}.%{_arch}.tar.xz
+%global fastdebugstaticlibzip %{_jvmdir}/%{name}-%{version}-%{prelease}.portable.fastdebug.static-libs.%{portabledir}.%{_arch}.tar.xz
 
 ############################################
 #
@@ -1481,8 +1483,8 @@ BuildRequires: java-%{featurever}-openjdk-portable-misc = %{epoch}:%{version}-%{
 %ifarch %{zero_arches}
 BuildRequires: libffi-devel
 %endif
-# 2023c required as of JDK-8305113
-BuildRequires: tzdata-java >= 2023c
+# 2024a required as of JDK-8325150
+BuildRequires: tzdata-java >= 2024a
 # Earlier versions have a bug in tree vectorization on PPC
 BuildRequires: gcc >= 4.8.3-8
 
@@ -1498,19 +1500,22 @@ BuildRequires: harfbuzz-devel
 BuildRequires: lcms2-devel
 BuildRequires: libjpeg-devel
 BuildRequires: libpng-devel
+BuildRequires: zlib-devel
 %else
 # Version in src/java.desktop/share/native/libfreetype/include/freetype/freetype.h
-Provides: bundled(freetype) = 2.13.0
+Provides: bundled(freetype) = 2.13.2
 # Version in src/java.desktop/share/native/libsplashscreen/giflib/gif_lib.h
-Provides: bundled(giflib) = 5.2.1
+Provides: bundled(giflib) = 5.2.2
 # Version in src/java.desktop/share/native/libharfbuzz/hb-version.h
-Provides: bundled(harfbuzz) = 7.2.0
+Provides: bundled(harfbuzz) = 8.2.2
 # Version in src/java.desktop/share/native/liblcms/lcms2.h
-Provides: bundled(lcms2) = 2.15.0
+Provides: bundled(lcms2) = 2.16.0
 # Version in src/java.desktop/share/native/libjavajpeg/jpeglib.h
 Provides: bundled(libjpeg) = 6b
 # Version in src/java.desktop/share/native/libsplashscreen/libpng/png.h
-Provides: bundled(libpng) = 1.6.39
+Provides: bundled(libpng) = 1.6.43
+# Version in src/java.base/share/native/libzip/zlib/zlib.h
+Provides: bundled(zlib) = 1.3.1
 %endif
 
 # this is always built, also during debug-only build
@@ -1986,26 +1991,54 @@ export JAVA_HOME=$(pwd)/%{installoutputdir -- ${suffix}}
 $JAVA_HOME/bin/java -XX:+UseShenandoahGC -version
 %endif
 
-# Check unlimited policy has been used
-$JAVA_HOME/bin/javac -d . %{SOURCE13}
-$JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
+# Only test on one architecture (the fastest) for Java only tests
+%ifarch %{jdk_test_arch}
 
-# Check ECC is working
-$JAVA_HOME/bin/javac -d . %{SOURCE14}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
+    # Check unlimited policy has been used
+    $JAVA_HOME/bin/javac -d . %{SOURCE13}
+    $JAVA_HOME/bin/java --add-opens java.base/javax.crypto=ALL-UNNAMED TestCryptoLevel
 
-# Check system crypto (policy) is active and can be disabled
-# Test takes a single argument - true or false - to state whether system
-# security properties are enabled or not.
-$JAVA_HOME/bin/javac -d . %{SOURCE15}
-export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
-export SEC_DEBUG="-Djava.security.debug=properties"
-$JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} true
-$JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+    # Check ECC is working
+    $JAVA_HOME/bin/javac -d . %{SOURCE14}
+    $JAVA_HOME/bin/java $(echo $(basename %{SOURCE14})|sed "s|\.java||")
 
-# Check correct vendor values have been set
-$JAVA_HOME/bin/javac -d . %{SOURCE16}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
+    # Check system crypto (policy) is active and can be disabled
+    # Test takes a single argument - true or false - to state whether system
+    # security properties are enabled or not.
+    $JAVA_HOME/bin/javac -d . %{SOURCE15}
+    export PROG=$(echo $(basename %{SOURCE15})|sed "s|\.java||")
+    export SEC_DEBUG="-Djava.security.debug=properties"
+    $JAVA_HOME/bin/java ${SEC_DEBUG} ${PROG} true
+    $JAVA_HOME/bin/java ${SEC_DEBUG} -Djava.security.disableSystemPropertiesFile=true ${PROG} false
+
+    # Check correct vendor values have been set
+    $JAVA_HOME/bin/javac -d . %{SOURCE16}
+    $JAVA_HOME/bin/java $(echo $(basename %{SOURCE16})|sed "s|\.java||") "%{oj_vendor}" "%{oj_vendor_url}" "%{oj_vendor_bug_url}" "%{oj_vendor_version}"
+
+    # Check translations are available for new timezones
+    $JAVA_HOME/bin/javac -d . %{SOURCE18}
+    $JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
+    $JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
+
+    # Check src.zip has all sources. See RHBZ#1130490
+    $JAVA_HOME/bin/jar -tf $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
+
+    # Check class files include useful debugging information
+    $JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
+    $JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
+    $JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
+
+    # Check generated class files include useful debugging information
+    $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
+    $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
+    $JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
+
+%else
+
+    # Just run a basic java -version test on other architectures
+    $JAVA_HOME/bin/java -version
+
+%endif
 
 # Check java launcher has no SSB mitigation
 if ! nm $JAVA_HOME/bin/java | grep set_speculation ; then true ; else false; fi
@@ -2016,11 +2049,6 @@ nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation
 %else
 if ! nm $JAVA_HOME/bin/%{alt_java_name} | grep set_speculation ; then true ; else false; fi
 %endif
-
-# Check translations are available for new timezones
-$JAVA_HOME/bin/javac -d . %{SOURCE18}
-$JAVA_HOME/bin/java $(echo $(basename %{SOURCE18})|sed "s|\.java||") JRE
-$JAVA_HOME/bin/java -Djava.locale.providers=CLDR $(echo $(basename %{SOURCE18})|sed "s|\.java||") CLDR
 
 %if %{include_staticlibs}
 # Check debug symbols in static libraries (smoke test)
@@ -2094,19 +2122,6 @@ EOF
 %ifarch %{gdb_arches}
 grep 'JavaCallWrapper::JavaCallWrapper' gdb.out
 %endif
-
-# Check src.zip has all sources. See RHBZ#1130490
-$JAVA_HOME/bin/jar -tf $JAVA_HOME/lib/src.zip | grep 'sun.misc.Unsafe'
-
-# Check class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.lang.Object | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.lang.Object | grep LocalVariableTable
-
-# Check generated class files include useful debugging information
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep "Compiled from"
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LineNumberTable
-$JAVA_HOME/bin/javap -l java.nio.ByteBuffer | grep LocalVariableTable
 
 # build cycles check
 done
@@ -2490,11 +2505,73 @@ end
 %endif
 
 %changelog
-* Thu Jan 18 2024 Matthew Hink <mhink@ciq.com> - 11.0.22.0.7-2
-- Set portablerelease/portableversion variables to match LTS
+* Mon Oct 21 2024 Jonathan Dieter <jdieter@ciq.com> - 11.0.25.0.9-2.el8_6
+- Fix build for 8.6 LTS
 
-* Thu Jan 18 2024 Release Engineering <releng@rockylinux.org> - 11.0.22.0.7-2
+* Wed Oct 16 2024 Release Engineering <releng@rockylinux.org> - 11.0.25.0.9-2
 - Build for Rocky Linux %{rocky} using our own portable
+
+* Thu Oct 10 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.9-2
+- Update to jdk-11.0.25+9 (GA)
+- Update release notes to 11.0.25+9
+- Switch to GA mode for release
+- Related: RHEL-58772
+- ** This tarball is embargoed until 2024-10-15 @ 1pm PT. **
+
+* Tue Oct 08 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.8-0.2.ea
+- Update to jdk-11.0.25+8 (EA)
+- Update release notes to 11.0.25+8
+- Related: RHEL-58772
+
+* Thu Oct 03 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.7-0.3.ea
+- RHJDKBP-875 - Added gating.yaml and/or rpminspect.yaml
+- RHJDKBP-874 - Remove %bcond_without artifacts
+- Related: RHEL-58772
+
+* Thu Sep 26 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.7-0.1.ea
+- Update to jdk-11.0.25+7 (EA)
+- Update release notes to 11.0.25+7
+- Related: RHEL-58772
+
+* Tue Sep 24 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.6-0.3.ea
+- Limit Java only tests to one 'jdk_test_arch'
+- Resolves: RHEL-59727
+- Related: RHEL-58772
+
+* Fri Sep 20 2024 Antonio Vieiro <avieirov@redhat.com> - 1:11.0.25.0.6-0.2.ea
+- Update to jdk-11.0.25+6 (EA)
+- Switch to EA mode
+- Update release notes to 11.0.25+6
+- Related: RHEL-58772
+
+* Wed Jul 10 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:11.0.24.0.8-2
+- Adjusted DTLS & RPATH NEWS entries to match OpenJDK 17 & 21 release notes
+
+* Wed Jul 10 2024 Anton Bobrov <abobrov@redhat.com> - 1:11.0.24.0.8-1
+- Update to jdk-11.0.24+8 (GA)
+- Update release notes to 11.0.24+8
+- Switch to GA mode for release
+- Fix Provides to reflect up to date component versions
+- Add zlib build required or bundled version (1.3.1), depending on system_libs setting
+- Resolves: RHEL-45209
+- ** This tarball is embargoed until 2024-07-16 @ 1pm PT. **
+
+* Thu Apr 11 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:11.0.23.0.9-2
+- Fix 11.0.22 release date in NEWS
+
+* Wed Apr 10 2024 Anton Bobrov <abobrov@redhat.com> - 1:11.0.23.0.9-1
+- Update to jdk-11.0.23+9 (GA)
+- Update release notes to 11.0.23+9
+- Switch to GA mode for release
+- Require tzdata 2024a due to upstream inclusion of JDK-8322725
+- Only require tzdata 2023d for now as 2024a is unavailable in buildroot
+- ** This tarball is embargoed until 2024-04-16 @ 1pm PT. **
+- Resolves: RHEL-30917
+
+* Thu Mar 28 2024 Anton Bobrov <abobrov@redhat.com> - 1:11.0.23.0.1-0.1.ea
+- Update to jdk-11.0.23+1 (EA)
+- Update release notes to 11.0.23+1
+- Switch to EA mode
 
 * Wed Jan 10 2024 Andrew Hughes <gnu.andrew@redhat.com> - 1:11.0.22.0.7-1
 - Update to jdk-11.0.22+7 (GA)
