@@ -1020,7 +1020,7 @@ Provides: java-%{javaver}-%{origin}-src%1 = %{epoch}:%{version}-%{release}
 
 Name:    java-%{javaver}-%{origin}
 Version: %{newjavaver}.%{buildver}
-Release: %{?eaprefix}%{rpmrelease}%{?extraver}.0.3%{?dist}
+Release: %{?eaprefix}%{rpmrelease}%{?extraver}.0.4%{?dist}
 # java-1.5.0-ibm from jpackage.org set Epoch to 1 for unknown reasons
 # and this change was brought into RHEL-4. java-1.5.0-ibm packages
 # also included the epoch in their virtual provides. This created a
@@ -1141,8 +1141,11 @@ Patch1002:	1002-orabug36904359-CVE-2024-21138-fix.patch
 Patch1003:	1003-orabug36904359-CVE-2024-21140-fix-part1.patch
 Patch1004:	1004-orabug36904359-CVE-2024-21140-fix-part2.patch
 Patch1005:	1005-orabug36904359-CVE-2024-21144-fix.patch
-Patch1006:	1006-orabug36904359-CVE-2024-21145-fix.patch	
+Patch1006:	1006-orabug36904359-CVE-2024-21145-fix.patch
 Patch1007:	1007-orabug36904359-CVE-2024-21147-fix.patch
+
+# CIQ Patches
+Patch2000:      CVE-2025-50059.patch
 
 #############################################
 #
@@ -1500,6 +1503,9 @@ pushd %{top_level_dir_name}
 %patch1005 -p1
 %patch1006 -p1
 %patch1007 -p1
+
+%patch2000 -p1
+
 
 popd # openjdk
 
@@ -1861,7 +1867,7 @@ done
 
 # Make sure gdb can do a backtrace based on line numbers on libjvm.so
 # javaCalls.cpp:58 should map to:
-# http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/ff3b27e6bcc2/src/share/vm/runtime/javaCalls.cpp#l58 
+# http://hg.openjdk.java.net/jdk8u/jdk8u/hotspot/file/ff3b27e6bcc2/src/share/vm/runtime/javaCalls.cpp#l58
 # Using line number 1 might cause build problems. See:
 # https://bugzilla.redhat.com/show_bug.cgi?id=1539664
 # https://bugzilla.redhat.com/show_bug.cgi?id=1538767
@@ -2001,9 +2007,9 @@ cp -r %{top_level_dir_name}/src/sample  $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suf
 
 
 # stabilize permissions
-find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/ -name "*.so" -exec chmod 755 {} \; ; 
-find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/ -type d -exec chmod 755 {} \; ; 
-find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/legal -type f -exec chmod 644 {} \; ; 
+find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/ -name "*.so" -exec chmod 755 {} \; ;
+find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/ -type d -exec chmod 755 {} \; ;
+find $RPM_BUILD_ROOT/%{_jvmdir}/%{sdkdir $suffix}/legal -type f -exec chmod 644 {} \; ;
 
 # end, dual install
 done
@@ -2260,11 +2266,14 @@ require "copy_jdk_configs.lua"
 %endif
 
 %changelog
+* Wed Jul 30 2025 Trinity Quirk <tquirk@ciq.com> - 1:11.0.23.0.9-2.0.4
+- Patch CVE-2025-50059
+
 * Tue Aug 16 2024 Sourav Sharma <sourav.ss.sharma@oracle.com> - 1:11.0.23.0.9-2.0.3
 - Fixes below CVE's
 - CVE-2024-21131 Improve-UTF8-String-supports
 - CVE-2024-21138 Better-symbol-storage
-- Fixes malformed control flow openjdk bug8303466 
+- Fixes malformed control flow openjdk bug8303466
 - CVE-2024-21140 Improved-loop-handling
 - CVE-2024-21144 Enhance-Pack-200-loading
 - CVE-2024-21145 Improve-2D-image-handling
